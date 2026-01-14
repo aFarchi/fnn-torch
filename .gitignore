@@ -1,0 +1,22 @@
+# jupyter
+.ipynb_checkpoints
+
+# pixi
+.pixi
+pixi.lock
+
+# pycharm
+.idea
+
+# python
+dist
+__pycache__
+
+# vim
+*.swp
+
+# output
+wdir/
+
+# c++
+src/cpp_main/CMakeLists.txt
