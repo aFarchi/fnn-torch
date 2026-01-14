@@ -23,7 +23,7 @@ fnn_torch = { path = ".", editable = true }
 
 [tool.pixi.tasks]
 init = "fnn-torch init"
-make = "cd wdir; cmake ../src/fnn_main; make"
+make = "mkdir -p wdir; cd wdir; cmake ../src/fnn_main; make"
 fnn = "./wdir/run-fnn.x"
 check = "fnn-torch check"
 

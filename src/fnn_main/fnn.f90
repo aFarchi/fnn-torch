@@ -1,5 +1,6 @@
 
 ! - check if memory allocation is needed for sequential / skip connection layers
+! - remove unecessary debug prints
 
 
 module fnn
@@ -12,7 +13,7 @@ module fnn
     public :: rk, r0, ik, rand1d, rand2d, NeuralNetwork, nn_fromfile
 
     integer, parameter :: rk = real64
-    integer, parameter :: r0 = real32
+    integer, parameter :: r0 = real64
     integer, parameter :: ik = int32
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -234,6 +235,7 @@ contains
         integer(ik), intent(in) :: fileunit
         real(r0), allocatable :: the_parameters(:)
         ! read in r0 precision
+        print *, 'starting layer_read_parameters'
         allocate(the_parameters(size(self % parameters)))
         read(fileunit) the_parameters
         ! cast to rk precision
@@ -659,10 +661,12 @@ contains
         character(len=*), intent(in) :: filename_bin
         integer(ik) :: fileunit
         ! read architecture
+        print *, 'reading architecture file'
         open(newunit=fileunit, file=filename_txt, action='read')
         self % layer_container = layer_container_fromfile(batch_size, fileunit)
         close(fileunit)
         ! read parameters
+        print *, 'reading parameters'
         open(newunit=fileunit, file=filename_bin, form='unformatted', access='stream', action='read')
         call self % layer_container % this_layer % read_parameters(fileunit)
         close(fileunit)
@@ -673,9 +677,11 @@ contains
         integer(ik), intent(in) :: batch_size
         integer(ik), intent(in) :: fileunit
         character(len=100) :: layer_name
+        print *, 'starting layer_container_fromfile'
         read(fileunit, fmt=*) layer_name
         select case(trim(layer_name)) ! loop over all layers here
             case('linear')
+                print *, 'starting case linear'
                 allocate(LinearLayer::self % this_layer)
                 self % this_layer = linear_layer_fromfile(batch_size, fileunit)
             case('skip_connection')
@@ -706,6 +712,11 @@ contains
         integer(ik), intent(in) :: batch_size
         integer(ik), intent(in) :: num_parameters
         logical, intent(in) :: frozen
+        print *, 'starting construct_layer'
+        print *, 'input size:', input_size
+        print *, 'output size:', output_size
+        print *, 'batch size:', batch_size
+        print *, 'num. parameters:', num_parameters
         self % input_size = input_size
         self % output_size = output_size
         self % batch_size = batch_size
@@ -721,6 +732,7 @@ contains
         if ( frozen ) then
             self % num_parameters = 0
         end if
+        print *, 'finishing construct_layer'
     end function construct_layer
     
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -758,10 +770,14 @@ contains
         integer(ik) :: input_size
         integer(ik) :: output_size
         integer(ik) :: num_parameters
+        print *, 'starting linear_layer_fromfile'
         frozen = is_frozen(fileunit)
         read(fileunit, *) input_size
         read(fileunit, *) output_size
-        num_parameters = (self % input_size+1) * self % output_size
+        print *, 'is frozen:', frozen
+        print *, 'input size:', input_size
+        print *, 'output size:', output_size
+        num_parameters = (input_size+1) * output_size
         self % Layer = construct_layer(input_size, output_size, batch_size, num_parameters, frozen)
     end function linear_layer_fromfile
 

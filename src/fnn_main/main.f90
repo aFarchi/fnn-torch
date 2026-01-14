@@ -20,7 +20,7 @@ program main
     ! create neural network using a batch size of 16
     ! the architecture and parameters are read from file
     Ne = 16
-    network = nn_fromfile(Ne, 'wdir/architecture.bin', 'wdir/parameters.bin')
+    network = nn_fromfile(Ne, 'wdir/architecture.txt', 'wdir/parameters.bin')
     Nx = network % get_input_size()
     Ny = network % get_output_size()
 
@@ -31,14 +31,16 @@ program main
     ! fill in input tensors with random numbers
     call rand2d(x)
 
+    ! save input
+    open(unit=10, file='wdir/x.bin', form='unformatted', access='stream', action='write')
+    write(10) x
+    close(10)
+
     ! apply forward
     do i = 1, Ne
         call network % apply_forward(.true., i, x(:, i), y(:, i))
     end do
-
-    ! save output
-    open(unit=10, file='wdir/fnn_out.bin', form='unformatted', access='stream', action='write')
-    write(10) x
+    open(unit=10, file='wdir/y.bin', form='unformatted', access='stream', action='write')
     write(10) y
     close(10)
 
