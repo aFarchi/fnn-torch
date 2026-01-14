@@ -48,23 +48,23 @@ program main
 
     ! save input
     print *, 'writing "wdir/p.bin"'
-    open(unit=10, file='wdir/p.bin', form='unformatted', access='stream', action='write')
+    open(unit=10, file='wdir/p.bin', form='unformatted', access='stream', action='write', status='replace')
     write(10) p
     close(10)
     print *, 'writing "wdir/x.bin"'
-    open(unit=10, file='wdir/x.bin', form='unformatted', access='stream', action='write')
+    open(unit=10, file='wdir/x.bin', form='unformatted', access='stream', action='write', status='replace')
     write(10) x
     close(10)
     print *, 'writing "wdir/dp.bin"'
-    open(unit=10, file='wdir/dp.bin', form='unformatted', access='stream', action='write')
+    open(unit=10, file='wdir/dp.bin', form='unformatted', access='stream', action='write', status='replace')
     write(10) dp
     close(10)
     print *, 'writing "wdir/dx.bin"'
-    open(unit=10, file='wdir/dx.bin', form='unformatted', access='stream', action='write')
+    open(unit=10, file='wdir/dx.bin', form='unformatted', access='stream', action='write', status='replace')
     write(10) dx
     close(10)
     print *, 'writing "wdir/dy.bin"'
-    open(unit=10, file='wdir/dy.bin', form='unformatted', access='stream', action='write')
+    open(unit=10, file='wdir/dy.bin', form='unformatted', access='stream', action='write', status='replace')
     write(10) dy
     close(10)
 
@@ -73,7 +73,7 @@ program main
         call network % apply_forward(.true., i, x(:, i), y(:, i))
     end do
     print *, 'writing "wdir/y.bin"'
-    open(unit=10, file='wdir/y.bin', form='unformatted', access='stream', action='write')
+    open(unit=10, file='wdir/y.bin', form='unformatted', access='stream', action='write', status='replace')
     write(10) y
     close(10)
 
@@ -83,7 +83,7 @@ program main
         call network % apply_forward(.true., i, x(:, i), y(:, i))
     end do
     print *, 'writing "wdir/py.bin"'
-    open(unit=10, file='wdir/py.bin', form='unformatted', access='stream', action='write')
+    open(unit=10, file='wdir/py.bin', form='unformatted', access='stream', action='write', status='replace')
     write(10) y
     close(10)
 
@@ -94,11 +94,11 @@ program main
         FpT_dy_total(:) = FpT_dy_total(:) + FpT_dy(:, i)
     end do
     print *, 'writing "wdir/FpT_dy.bin"'
-    open(unit=10, file='wdir/FpT_dy.bin', form='unformatted', access='stream', action='write')
+    open(unit=10, file='wdir/FpT_dy.bin', form='unformatted', access='stream', action='write', status='replace')
     write(10) FpT_dy_total
     close(10)
     print *, 'writing "wdir/FxT_dy.bin"'
-    open(unit=10, file='wdir/FxT_dy.bin', form='unformatted', access='stream', action='write')
+    open(unit=10, file='wdir/FxT_dy.bin', form='unformatted', access='stream', action='write', status='replace')
     write(10) FxT_dy
     close(10)
 
@@ -107,7 +107,7 @@ program main
         call network % apply_tangent_linear(i, dp(:), dx(:, i), F_dx_dp(:, i))
     end do
     print *, 'writing "wdir/F_dx_dp.bin"'
-    open(unit=10, file='wdir/F_dx_dp.bin', form='unformatted', access='stream', action='write')
+    open(unit=10, file='wdir/F_dx_dp.bin', form='unformatted', access='stream', action='write', status='replace')
     write(10) F_dx_dp
     close(10)
 
