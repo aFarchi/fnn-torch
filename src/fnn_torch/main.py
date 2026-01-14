@@ -22,8 +22,9 @@ def cli():
     default='linear',
     help='name of the model to initialise (default "linear")',
 )
-@click.argument(
-    'encoding',
+@click.option(
+    '-e',
+    '--encoding',
     default='f8',
     help='encoding used for binary files (default "f8")',
 )
@@ -34,8 +35,9 @@ def init(name, encoding):
 
 
 @cli.command(name='check')
-@click.argument(
-    'encoding',
+@click.option(
+    '-e',
+    '--encoding',
     default='f8',
     help='encoding used for binary files (default "f8")',
 )
