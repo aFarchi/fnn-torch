@@ -26,7 +26,7 @@ def show_n_first(data, n_first, maximum=None):
 def compare_tensors(title, predicted, expected, rtol=1e-5, atol=0, n_first=5):
     predicted = predicted.detach().numpy()
     expected = expected.detach().numpy()
-    compare_arrays(title, predicted, expected, rtol, atol, n_first)
+    return compare_arrays(title, predicted, expected, rtol, atol, n_first)
 
 
 def compare_arrays(title, predicted, expected, rtol=1e-5, atol=0, n_first=5):
@@ -55,7 +55,9 @@ def compare_arrays(title, predicted, expected, rtol=1e-5, atol=0, n_first=5):
 
     if np.allclose(predicted, expected, atol=atol, rtol=rtol):
         logger.info(f'unittest passed with atol = {atol} and rtol = {rtol}')
+        return True
     else:
         logger.error(f'unittest failed with atol = {atol} and rtol = {rtol}')
         logger.info(f'maximum of abs. diff. = {abs(expected - predicted).max()}')
         logger.info(f'maximum of rel. diff. = {(abs(expected - predicted)/abs(expected)).max()}')
+        return False
