@@ -28,3 +28,19 @@ class LinearLayer(torch.nn.Module):
         if encoding is not None:
             parameters = parameters.astype(encoding)
         parameters.tofile(filename)
+
+    def to_named_parameters(self, p):
+        input_size = self.input_shape[1]
+        output_size = self.output_shape[1]
+        named_parameters = {
+            'linear.bias': p[:output_size],
+            'linear.weight': p[output_size:].reshape(input_size, output_size).T,
+        }
+        return named_parameters
+
+    @staticmethod
+    def flatten_named_parameters(named_p):
+        return torch.cat((
+            named_p['linear.bias'],
+            named_p['linear.weight'].T.flatten(),
+        ))
