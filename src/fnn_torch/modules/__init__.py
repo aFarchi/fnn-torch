@@ -1,5 +1,6 @@
 import numpy as np
 
+from fnn_torch.modules.layer_gelu import ExtendedGELU
 from fnn_torch.modules.wrapped_module import WrappedModule
 from fnn_torch.modules.layer_linear import ExtendedLinear, FrozenExtendedLinear
 from fnn_torch.modules.layer_sequential import ExtendedSequential
@@ -31,6 +32,12 @@ def construct_module(name):
             master_layer = ExtendedSequential(
                 ExtendedLinear(input_size=8, output_size=4),
                 ExtendedReLU(input_size=4),
+            )
+            return WrappedModule(master_layer)
+        case 'gelu':
+            master_layer = ExtendedSequential(
+                ExtendedLinear(input_size=8, output_size=4),
+                ExtendedGELU(input_size=4),
             )
             return WrappedModule(master_layer)
         case 'tanh':

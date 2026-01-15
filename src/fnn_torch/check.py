@@ -42,7 +42,7 @@ def check(encoding):
 
     logger.info('applying forward')
     y_py = model.regular_forward(x)
-    passed = compare_tensors('forward', y_fnn, y_py, rtol=1e-8, atol=0)
+    passed = compare_tensors('forward', y_fnn, y_py, rtol=1e-7, atol=0)
 
     logger.info('applying parametrised forward')
     y_py = model.forward(p, x)

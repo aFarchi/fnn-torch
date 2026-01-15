@@ -130,6 +130,13 @@ module fnn
     end type ReluActivationLayer
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    type, extends(ActivationLayer) :: GeluActivationLayer
+        private
+    contains
+        procedure, pass :: apply_forward => gelu_activation_apply_forward
+    end type GeluActivationLayer
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     type, extends(ActivationLayer) :: TanhActivationLayer
         private
     contains
@@ -649,6 +656,26 @@ contains
     end subroutine relu_activation_apply_forward
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! implementation of class GeluActivationLayer
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    subroutine gelu_activation_apply_forward(self, train, member, x, y)
+        class(GeluActivationLayer), intent(inout) :: self
+        logical, intent(in) :: train
+        integer(ik), intent(in) :: member
+        real(rk), intent(in) :: x(:)
+        real(rk), intent(out) :: y(:)
+        integer(ik) :: i
+        real(rk), parameter :: inv_sqrt2 = 1.0 / sqrt(2.0)
+        real(rk), parameter :: inv_sqrt2pi = 1.0 / sqrt(2.0 * acos(-1.0))
+
+        do i = 1, size(y)
+            y(i) = 0.5 * x(i) * (1.0 + erf(x(i) * inv_sqrt2))
+            self % x_prime(i, member) = 0.5 * (1.0 + erf(x(i) * inv_sqrt2)) +&
+                    x(i) * inv_sqrt2pi * exp(-0.5 * x(i) * x(i))
+        end do
+    end subroutine gelu_activation_apply_forward
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! implementation of class TanhActivationLayer
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     subroutine tanh_activation_apply_forward(self, train, member, x, y)
@@ -706,6 +733,10 @@ contains
                 print *, 'DEBUG: starting case relu_activation'
                 allocate(ReluActivationLayer::self % this_layer)
                 self % this_layer = relu_activation_layer_fromfile(batch_size, fileunit)
+            case('gelu_activation')
+                print *, 'DEBUG: starting case gelu_activation'
+                allocate(GeluActivationLayer::self % this_layer)
+                self % this_layer = gelu_activation_layer_fromfile(batch_size, fileunit)
             case('tanh_activation')
                 allocate(TanhActivationLayer::self % this_layer)
                 self % this_layer = tanh_activation_layer_fromfile(batch_size, fileunit)
@@ -856,6 +887,13 @@ contains
         integer(ik), intent(in) :: fileunit
         self % ActivationLayer = activation_layer_fromfile(batch_size, fileunit)
     end function relu_activation_layer_fromfile
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    type(GeluActivationLayer) function gelu_activation_layer_fromfile(batch_size, fileunit) result (self)
+        integer(ik), intent(in) :: batch_size
+        integer(ik), intent(in) :: fileunit
+        self % ActivationLayer = activation_layer_fromfile(batch_size, fileunit)
+    end function gelu_activation_layer_fromfile
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     type(TanhActivationLayer) function tanh_activation_layer_fromfile(batch_size, fileunit) result (self)
