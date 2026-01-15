@@ -803,9 +803,13 @@ contains
         integer(ik), intent(in) :: fileunit
         logical :: frozen
         integer(ik) :: input_size
+        print *, 'DEBUG: starting normalisation_layer_fromfile'
         frozen = is_frozen(fileunit)
         read(fileunit, *) input_size
-        self % Layer = construct_layer(input_size, input_size, batch_size, 2 * self % input_size, frozen)
+        print *, 'DEBUG: is frozen:', frozen
+        print *, 'DEBUG: input size:', input_size
+        self % Layer = construct_layer(input_size, input_size, batch_size, 2 * input_size, frozen)
+        print *, 'DEBUG: finishing normalisation_layer_fromfile'
     end function normalisation_layer_fromfile
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

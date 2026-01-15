@@ -1,3 +1,4 @@
+import numpy as np
 
 from fnn_torch.modules.wrapped_module import WrappedModule
 from fnn_torch.modules.layer_linear import ExtendedLinear
@@ -5,6 +6,7 @@ from fnn_torch.modules.layer_sequential import ExtendedSequential
 from fnn_torch.modules.layer_relu import ExtendedReLU
 from fnn_torch.modules.layer_tanh import ExtendedTanh
 from fnn_torch.modules.layer_skip_connection import SkipConnection
+from fnn_torch.modules.layer_normalisation import Normalisation
 
 
 def construct_module(name):
@@ -34,6 +36,11 @@ def construct_module(name):
             master_layer = SkipConnection(
                 ExtendedLinear(input_size=8, output_size=2),
             )
+            return WrappedModule(master_layer)
+        case 'normalisation':
+            alpha = 1 + 0.1 * np.random.randn(4)
+            beta = np.random.randn(4)
+            master_layer = Normalisation(alpha, beta)
             return WrappedModule(master_layer)
         case _:
             raise ValueError(f'unknown module: {name}')
