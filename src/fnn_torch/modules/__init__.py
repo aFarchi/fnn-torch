@@ -9,6 +9,7 @@ from fnn_torch.modules.layer_tanh import ExtendedTanh
 from fnn_torch.modules.layer_skip_connection import SkipConnection
 from fnn_torch.modules.layer_normalisation import Normalisation, FrozenNormalisation
 from fnn_torch.modules.layer_append_static import AppendStaticInput, FrozenAppendStaticInput
+from fnn_torch.modules.layer_dropout import ExtendedDropout
 
 
 def construct_module(name):
@@ -73,6 +74,14 @@ def construct_module(name):
             master_layer = ExtendedSequential(
                 ExtendedLinear(input_size=8, output_size=4),
                 FrozenAppendStaticInput(input_size=4, x_extra=x_extra),
+            )
+            return WrappedModule(master_layer)
+        case 'dropout':
+            alpha = np.zeros(10)
+            beta = np.ones(10)
+            master_layer = ExtendedSequential(
+                Normalisation(alpha, beta),
+                ExtendedDropout(input_size=10, dropout_rate=0.25),
             )
             return WrappedModule(master_layer)
         case _:

@@ -143,6 +143,14 @@ module fnn
         procedure, pass :: apply_forward => tanh_activation_apply_forward
     end type TanhActivationLayer
 
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    type, extends(ActivationLayer) :: DropoutLayer
+        private
+        real(rk) :: dropout_rate
+    contains
+        procedure, pass :: apply_forward => dropout_apply_forward
+    end type DropoutLayer
+
 contains
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -667,7 +675,6 @@ contains
         integer(ik) :: i
         real(rk), parameter :: inv_sqrt2 = 1.0 / sqrt(2.0)
         real(rk), parameter :: inv_sqrt2pi = 1.0 / sqrt(2.0 * acos(-1.0))
-
         do i = 1, size(y)
             y(i) = 0.5 * x(i) * (1.0 + erf(x(i) * inv_sqrt2))
             self % x_prime(i, member) = 0.5 * (1.0 + erf(x(i) * inv_sqrt2)) +&
@@ -687,6 +694,31 @@ contains
         y = tanh(x)
         self % x_prime(:, member) = 1 - y**2
     end subroutine tanh_activation_apply_forward
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! implementation of class DropoutLayer
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    subroutine dropout_apply_forward(self, train, member, x, y)
+        class(DropoutLayer), intent(inout) :: self
+        logical, intent(in) :: train
+        integer(ik), intent(in) :: member
+        real(rk), intent(in) :: x(:)
+        real(rk), intent(out) :: y(:)
+        integer(ik) :: i
+        if (train) then
+            call rand1d(self % x_prime(:, member))
+            do i = 1, self % input_size
+                if ( self % x_prime(i, member) < self % dropout_rate ) then
+                    self % x_prime(i, member) = 0
+                else
+                    self % x_prime(i, member) = 1 / (1 - self % dropout_rate)
+                endif
+            enddo
+        else
+            self % x_prime(:, member) = 1
+        end if
+        y = self % x_prime(:, member) * x
+    end subroutine dropout_apply_forward
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! constructors
@@ -740,6 +772,9 @@ contains
             case('tanh_activation')
                 allocate(TanhActivationLayer::self % this_layer)
                 self % this_layer = tanh_activation_layer_fromfile(batch_size, fileunit)
+            case('dropout')
+                allocate(DropoutLayer::self % this_layer)
+                self % this_layer = dropout_layer_fromfile(batch_size, fileunit)
             case default
                 print *, 'DEBUG: starting case sequential'
                 allocate(SequentialLayer::self % this_layer)
@@ -901,5 +936,13 @@ contains
         integer(ik), intent(in) :: fileunit
         self % ActivationLayer = activation_layer_fromfile(batch_size, fileunit)
     end function tanh_activation_layer_fromfile
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    type(DropoutLayer) function dropout_layer_fromfile(batch_size, fileunit) result (self)
+        integer(ik), intent(in) :: batch_size
+        integer(ik), intent(in) :: fileunit
+        self % ActivationLayer = activation_layer_fromfile(batch_size, fileunit)
+        read(fileunit, *) self % dropout_rate
+    end function dropout_layer_fromfile
 
 end module fnn
