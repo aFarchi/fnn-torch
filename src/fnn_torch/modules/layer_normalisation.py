@@ -48,3 +48,40 @@ class Normalisation(torch.nn.Module):
             named_dp[f'{prefix}alpha'],
             named_dp[f'{prefix}beta'],
         )
+
+
+class FrozenNormalisation(torch.nn.Module):
+
+    def __init__(self, alpha, beta):
+        super().__init__()
+        self.alpha = torch.from_numpy(alpha)
+        self.beta = torch.from_numpy(beta)
+        self.input_size = self.alpha.numel()
+        self.output_size = self.input_size
+        self.num_parameters = 0
+
+    def forward(self, x):
+        return self.alpha * x + self.beta
+
+    def save_architecture(self, f):
+        f.write('normalisation\n')
+        f.write('frozen\n')
+        f.write(f'{self.input_size}\n')
+
+    def get_p_list(self):
+        return (
+            self.alpha.detach().numpy(),
+            self.beta.detach().numpy(),
+        )
+
+    @staticmethod
+    def to_named_p(p, prefix):
+        return {}
+
+    @staticmethod
+    def to_named_dp(dp, prefix):
+        return {}
+
+    @staticmethod
+    def to_dp_list(named_dp, prefix):
+        return ()

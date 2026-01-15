@@ -6,7 +6,7 @@ from fnn_torch.modules.layer_sequential import ExtendedSequential
 from fnn_torch.modules.layer_relu import ExtendedReLU
 from fnn_torch.modules.layer_tanh import ExtendedTanh
 from fnn_torch.modules.layer_skip_connection import SkipConnection
-from fnn_torch.modules.layer_normalisation import Normalisation
+from fnn_torch.modules.layer_normalisation import Normalisation, FrozenNormalisation
 from fnn_torch.modules.layer_append_static import AppendStaticInput
 
 
@@ -48,6 +48,14 @@ def construct_module(name):
             alpha = 1 + 0.1 * np.random.randn(4)
             beta = np.random.randn(4)
             master_layer = Normalisation(alpha, beta)
+            return WrappedModule(master_layer)
+        case 'frozen-normalisation':
+            alpha = 1 + 0.1 * np.random.randn(4)
+            beta = np.random.randn(4)
+            master_layer = ExtendedSequential(
+                ExtendedLinear(input_size=8, output_size=4),
+                FrozenNormalisation(alpha, beta),
+            )
             return WrappedModule(master_layer)
         case 'append':
             x_extra = np.random.randn(4)
