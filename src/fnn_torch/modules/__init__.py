@@ -7,7 +7,7 @@ from fnn_torch.modules.layer_relu import ExtendedReLU
 from fnn_torch.modules.layer_tanh import ExtendedTanh
 from fnn_torch.modules.layer_skip_connection import SkipConnection
 from fnn_torch.modules.layer_normalisation import Normalisation, FrozenNormalisation
-from fnn_torch.modules.layer_append_static import AppendStaticInput
+from fnn_torch.modules.layer_append_static import AppendStaticInput, FrozenAppendStaticInput
 
 
 def construct_module(name):
@@ -60,6 +60,13 @@ def construct_module(name):
         case 'append':
             x_extra = np.random.randn(4)
             master_layer = AppendStaticInput(input_size=8, x_extra=x_extra)
+            return WrappedModule(master_layer)
+        case 'frozen-append':
+            x_extra = np.random.randn(4)
+            master_layer = ExtendedSequential(
+                ExtendedLinear(input_size=8, output_size=4),
+                FrozenAppendStaticInput(input_size=4, x_extra=x_extra),
+            )
             return WrappedModule(master_layer)
         case _:
             raise ValueError(f'unknown module: {name}')

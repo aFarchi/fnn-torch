@@ -48,3 +48,45 @@ class AppendStaticInput(torch.nn.Module):
         return (
             named_dp[f'{prefix}x_extra'],
         )
+
+
+class FrozenAppendStaticInput(torch.nn.Module):
+
+    def __init__(self, input_size, x_extra):
+        super().__init__()
+        self.x_extra = torch.from_numpy(x_extra)
+        self.input_size = input_size
+        self.output_size = input_size + self.x_extra.numel()
+        self.num_parameters = 0
+        self.numel = self.x_extra.numel()
+
+    def forward(self, x):
+        x_extra = self.x_extra
+        if len(x.shape) == 2:
+            batch_size = x.shape[0]
+            x_extra = x_extra.reshape((1, self.numel))
+            x_extra = x_extra.expand((batch_size, self.numel))
+        return torch.cat((x, x_extra), dim=-1)
+
+    def save_architecture(self, f):
+        f.write('append_static_input\n')
+        f.write('frozen\n')
+        f.write(f'{self.input_size}\n')
+        f.write(f'{self.numel}\n')
+
+    def get_p_list(self):
+        return (
+            self.x_extra.detach().numpy(),
+        )
+
+    @staticmethod
+    def to_named_p(p, prefix):
+        return {}
+
+    @staticmethod
+    def to_named_dp(dp, prefix):
+        return {}
+
+    @staticmethod
+    def to_dp_list(named_dp, prefix):
+        return ()
