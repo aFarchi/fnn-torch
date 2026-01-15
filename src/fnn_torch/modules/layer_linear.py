@@ -37,7 +37,46 @@ class ExtendedLinear(torch.nn.Linear):
         )
 
 
-class FrozenExtendedLinear(torch.nn.Linear):
+class FrozenExtendedLinear(torch.nn.Module):
+
+    def __init__(self, input_size, output_size):
+        super().__init__()
+        linear = torch.nn.Linear(input_size, output_size)
+        self.bias = torch.clone(linear.bias)
+        self.weight = torch.clone(linear.weight)
+        self.input_size = input_size
+        self.output_size = output_size
+        self.num_parameters = 0
+
+    def forward(self, x):
+        return x @ self.weight.T + self.bias
+
+    def save_architecture(self, f):
+        f.write('linear\n')
+        f.write('frozen\n')
+        f.write(f'{self.input_size}\n')
+        f.write(f'{self.output_size}\n')
+
+    def get_p_list(self):
+        return (
+            self.bias.detach().numpy(),
+            self.weight.detach().numpy().T.flatten(),
+        )
+
+    @staticmethod
+    def to_named_p(p, prefix):
+        return {}
+
+    @staticmethod
+    def to_named_dp(dp, prefix):
+        return {}
+
+    @staticmethod
+    def to_dp_list(named_dp, prefix):
+        return ()
+
+
+class FrozenExtendedLinearV2(torch.nn.Linear):
 
     def __init__(self, input_size, output_size):
         super().__init__(input_size, output_size)
