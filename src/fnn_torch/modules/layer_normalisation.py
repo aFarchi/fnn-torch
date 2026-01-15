@@ -24,21 +24,27 @@ class Normalisation(torch.nn.Module):
         f.write('not-frozen\n')
         f.write(f'{self.input_size}\n')
 
-    def get_flat_parameters(self):
+    def get_p_list(self):
         return (
             self.alpha.detach().numpy(),
             self.beta.detach().numpy(),
         )
 
-    def to_named_parameters(self, p, prefix=''):
+    def to_named_p(self, p, prefix):
         return {
             f'{prefix}alpha': p[:self.input_size],
             f'{prefix}beta': p[self.input_size:],
         }
 
+    def to_named_dp(self, dp, prefix):
+        return {
+            f'{prefix}alpha': dp[:self.input_size],
+            f'{prefix}beta': dp[self.input_size:],
+        }
+
     @staticmethod
-    def get_flat_named_parameters(named_p, prefix=''):
+    def to_dp_list(named_dp, prefix):
         return (
-            named_p[f'{prefix}alpha'],
-            named_p[f'{prefix}beta'],
+            named_dp[f'{prefix}alpha'],
+            named_dp[f'{prefix}beta'],
         )

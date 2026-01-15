@@ -187,7 +187,9 @@ contains
     subroutine nn_set_parameters(self, new_parameters)
         class(NeuralNetwork), intent(inout) :: self
         real(rk), intent(in) :: new_parameters(:)
+        print *, 'DEBUG: starting nn_set_parameters'
         call self % layer_container % this_layer % set_parameters(new_parameters)
+        print *, 'DEBUG: finished nn_set_parameters'
     end subroutine nn_set_parameters
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -246,7 +248,12 @@ contains
     subroutine layer_set_parameters(self, new_parameters)
         class(Layer), intent(inout) :: self
         real(rk), intent(in) :: new_parameters(:)
-        self % parameters = new_parameters
+        print *, 'DEBUG: starting layer_set_parameters'
+        if ( self % num_parameters > 0 ) then
+            print *, 'DEBUG: not skipping! num_parameters = ', self % num_parameters
+            self % parameters = new_parameters
+        end if
+        print *, 'DEBUG: finished nn_set_parameters'
     end subroutine layer_set_parameters
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -303,10 +310,12 @@ contains
         class(SequentialLayer), intent(inout) :: self
         real(rk), intent(in) :: new_parameters(:)
         integer(ik) :: i
+        print *, 'DEBUG: starting sequential_set_parameters'
         do i = 1, self % num_layers
             call self % list_layers(i) % this_layer % set_parameters(&
                 new_parameters(self % ip_start(i):self % ip_end(i)))
         end do
+        print *, 'DEBUG: finished sequential_set_parameters'
     end subroutine sequential_set_parameters
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -701,9 +710,11 @@ contains
                 allocate(TanhActivationLayer::self % this_layer)
                 self % this_layer = tanh_activation_layer_fromfile(batch_size, fileunit)
             case default
+                print *, 'DEBUG: starting case sequential'
                 allocate(SequentialLayer::self % this_layer)
                 self % this_layer = sequential_layer_fromfile(batch_size, fileunit)
         end select
+        print *, 'DEBUG: finishing layer_container_fromfile'
     end function layer_container_fromfile
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -717,7 +728,7 @@ contains
         print *, 'DEBUG: input size:', input_size
         print *, 'DEBUG: output size:', output_size
         print *, 'DEBUG: batch size:', batch_size
-        print *, 'DEBUG: num. parameters:', num_parameters
+        print *, 'DEBUG: num. parameters BEFORE:', num_parameters
         self % input_size = input_size
         self % output_size = output_size
         self % batch_size = batch_size
@@ -733,6 +744,7 @@ contains
         if ( frozen ) then
             self % num_parameters = 0
         end if
+        print *, 'DEBUG: num. parameters AFTER:', self % num_parameters
         print *, 'DEBUG: finishing construct_layer'
     end function construct_layer
     
@@ -742,6 +754,7 @@ contains
         integer(ik), intent(in) :: fileunit
         integer(ik) :: i
         integer(ik) :: ip
+        print *, 'DEBUG: starting sequential_layer_fromfile'
         read(fileunit, *) self % num_layers
         allocate(self % list_layers(self % num_layers))
         allocate(self % ip_start(self % num_layers))
@@ -761,6 +774,7 @@ contains
             .false.&
         )
         self % num_parameters = ip
+        print *, 'DEBUG: finishing sequential_layer_fromfile'
     end function sequential_layer_fromfile
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -780,6 +794,7 @@ contains
         print *, 'DEBUG: output size:', output_size
         num_parameters = (input_size+1) * output_size
         self % Layer = construct_layer(input_size, output_size, batch_size, num_parameters, frozen)
+        print *, 'DEBUG: finished linear_layer_fromfile'
     end function linear_layer_fromfile
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

@@ -17,17 +17,23 @@ class SkipConnection(torch.nn.Module):
         f.write('skip_connection\n')
         self.internal_layer.save_architecture(f)
 
-    def get_flat_parameters(self):
-        return self.internal_layer.get_flat_parameters()
+    def get_p_list(self):
+        return self.internal_layer.get_p_list()
 
-    def to_named_parameters(self, p, prefix=''):
-        return self.internal_layer.to_named_parameters(
+    def to_named_p(self, p, prefix):
+        return self.internal_layer.to_named_p(
             p,
             prefix=f'{prefix}internal_layer.',
         )
 
-    def get_flat_named_parameters(self, named_p, prefix=''):
-        return self.internal_layer.get_flat_named_parameters(
-            named_p,
+    def to_named_dp(self, dp, prefix):
+        return self.internal_layer.to_named_dp(
+            dp,
+            prefix=f'{prefix}internal_layer.',
+        )
+
+    def to_dp_list(self, named_dp, prefix):
+        return self.internal_layer.to_dp_list(
+            named_dp,
             prefix=f'{prefix}internal_layer.',
         )

@@ -46,23 +46,28 @@ def check(encoding):
 
     logger.info('applying parametrised forward')
     y_py = model.forward(p, x)
-    passed = passed and compare_tensors('parametrised forward', py_fnn, y_py, rtol=1e-8, atol=0)
+    passed = compare_tensors('parametrised forward', py_fnn, y_py, rtol=1e-8, atol=0) and passed
 
     logger.info('applying adjoint')
     ad_py = model.apply_ad(dy)
     FpT_dy_py = ad_py[0]
     FxT_dy_py = ad_py[1]
-    passed = passed and compare_tensors('FpT_dy', FpT_dy_fnn, FpT_dy_py, rtol=1e-8, atol=0)
-    passed = passed and compare_tensors('FxT_dy', FxT_dy_fnn, FxT_dy_py, rtol=1e-8, atol=0)
+    passed = compare_tensors('FpT_dy', FpT_dy_fnn, FpT_dy_py, rtol=1e-8, atol=0) and passed
+    passed = compare_tensors('FxT_dy', FxT_dy_fnn, FxT_dy_py, rtol=1e-8, atol=0) and passed
 
     logger.info('applying tangent linear')
     F_dx_dp_py = model.apply_tl(dp, dx)
-    passed = passed and compare_tensors('F_dx_dp', F_dx_dp_fnn, F_dx_dp_py, rtol=1e-8, atol=0)
+    passed = compare_tensors('F_dx_dp', F_dx_dp_fnn, F_dx_dp_py, rtol=1e-8, atol=0) and passed
 
-    logger.info('computing adjoint test')
+    logger.info('computing adjoint test on fnn input')
     dot_1 = np.array([FpT_dy_fnn @ dp + FxT_dy_fnn @ dx])
-    dot_2 = np.array([F_dx_dp_py @ dy])
-    passed = passed and compare_arrays('dot', dot_1, dot_2, rtol=1e-8, atol=0, n_first=1)
+    dot_2 = np.array([F_dx_dp_fnn @ dy])
+    passed = compare_arrays('dot fnn', dot_1, dot_2, rtol=1e-8, atol=0, n_first=1) and passed
+
+    logger.info('computing adjoint test on python input')
+    dot_1 = np.array([FpT_dy_py.detach() @ dp + FxT_dy_py.detach() @ dx])
+    dot_2 = np.array([F_dx_dp_py.detach() @ dy])
+    passed = compare_arrays('dot torch', dot_1, dot_2, rtol=1e-8, atol=0, n_first=1) and passed
 
     if passed:
         logger.info('all unittests passed')

@@ -26,19 +26,25 @@ class AppendStaticInput(torch.nn.Module):
         f.write(f'{self.input_size}\n')
         f.write(f'{self.num_parameters}\n')
 
-    def get_flat_parameters(self):
+    def get_p_list(self):
         return (
             self.x_extra.detach().numpy(),
         )
 
     @staticmethod
-    def to_named_parameters(p, prefix=''):
+    def to_named_p(p, prefix):
         return {
             f'{prefix}x_extra': p,
         }
 
     @staticmethod
-    def get_flat_named_parameters(named_p, prefix=''):
+    def to_named_dp(dp, prefix):
+        return {
+            f'{prefix}x_extra': dp,
+        }
+
+    @staticmethod
+    def to_dp_list(named_dp, prefix):
         return (
-            named_p[f'{prefix}x_extra'],
+            named_dp[f'{prefix}x_extra'],
         )

@@ -1,7 +1,7 @@
 import numpy as np
 
 from fnn_torch.modules.wrapped_module import WrappedModule
-from fnn_torch.modules.layer_linear import ExtendedLinear
+from fnn_torch.modules.layer_linear import ExtendedLinear, FrozenExtendedLinear
 from fnn_torch.modules.layer_sequential import ExtendedSequential
 from fnn_torch.modules.layer_relu import ExtendedReLU
 from fnn_torch.modules.layer_tanh import ExtendedTanh
@@ -19,6 +19,12 @@ def construct_module(name):
             master_layer = ExtendedSequential(
                 ExtendedLinear(input_size=8, output_size=4),
                 ExtendedLinear(input_size=4, output_size=2),
+            )
+            return WrappedModule(master_layer)
+        case 'frozen-linear':
+            master_layer = ExtendedSequential(
+                ExtendedLinear(input_size=8, output_size=4),
+                FrozenExtendedLinear(input_size=4, output_size=2),
             )
             return WrappedModule(master_layer)
         case 'relu':

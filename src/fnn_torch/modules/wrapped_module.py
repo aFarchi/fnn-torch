@@ -30,36 +30,39 @@ class WrappedModule(torch.nn.Module):
         x = x.reshape(self.input_shape)
         self.p = p
         self.x = x
-        self.named_p = self.to_named_parameters(p)
+        self.named_p = self.to_named_p(p)
         y = self.named_forward(self.named_p, self.x)
         return y.reshape(-1)
 
     def apply_tl(self, dp, dx):
         dx = dx.reshape(self.input_shape)
-        named_dp = self.to_named_parameters(dp)
+        named_dp = self.to_named_dp(dp)
         return jvp(self.named_forward, (self.named_p, self.x), (named_dp, dx))[1].reshape(-1)
 
     def apply_ad(self, dy):
         dy = dy.reshape(self.output_shape)
         _, vjp_fn = vjp(self.named_forward, self.named_p, self.x)
-        dp, dx = vjp_fn(dy)
-        dp_flat = self.flatten_named_parameters(dp)
-        return dp_flat, dx.reshape(-1)
+        named_dp, dx = vjp_fn(dy)
+        dp = self.to_dp(named_dp)
+        return dp, dx.reshape(-1)
 
     def save_architecture(self, filename):
         with open(filename, 'w') as f:
             self.master_layer.save_architecture(f)
 
     def save_parameters(self, filename, encoding=None):
-        parameters = self.master_layer.get_flat_parameters()
+        parameters = self.master_layer.get_p_list()
         parameters = np.concat(parameters)
         if encoding is not None:
             parameters = parameters.astype(encoding)
         parameters.tofile(filename)
 
-    def to_named_parameters(self, p):
-        return self.master_layer.to_named_parameters(p, prefix='')
+    def to_named_p(self, p):
+        return self.master_layer.to_named_p(p, prefix='')
 
-    def flatten_named_parameters(self, named_p):
-        parameters = self.master_layer.get_flat_named_parameters(named_p, prefix='')
-        return torch.cat(parameters)
+    def to_named_dp(self, dp):
+        return self.master_layer.to_named_dp(dp, prefix='')
+
+    def to_dp(self, named_dp):
+        dp_list = self.master_layer.to_dp_list(named_dp, prefix='')
+        return torch.cat(dp_list)

@@ -13,13 +13,17 @@ class ExtendedTanh(torch.nn.Tanh):
         f.write(f'{self.input_size}\n')
 
     @staticmethod
-    def get_flat_parameters():
+    def get_p_list():
         return ()
 
     @staticmethod
-    def to_named_parameters(p, prefix=''):
+    def to_named_p(p, prefix):
         return {}
 
     @staticmethod
-    def get_flat_named_parameters(named_p, prefix=''):
+    def to_named_dp(dp, prefix):
+        return {}
+
+    @staticmethod
+    def to_dp_list(named_dp, prefix):
         return ()
