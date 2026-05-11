@@ -84,5 +84,43 @@ def construct_module(name):
                 ExtendedDropout(input_size=10, dropout_rate=0.25),
             )
             return WrappedModule(master_layer)
+        case 'r03':
+            alpha_in = np.ones(420)
+            beta_in = np.zeros(420)
+            alpha_out = np.ones(412)
+            beta_out = np.zeros(412)
+            master_layer = ExtendedSequential(
+                FrozenNormalisation(alpha_in, beta_in),
+                ExtendedLinear(input_size=420, output_size=512),
+                ExtendedTanh(input_size=512),
+                ExtendedLinear(input_size=512, output_size=512),
+                ExtendedTanh(input_size=512),
+                ExtendedLinear(input_size=512, output_size=512),
+                ExtendedTanh(input_size=512),
+                ExtendedLinear(input_size=512, output_size=512),
+                ExtendedTanh(input_size=512),
+                ExtendedLinear(input_size=512, output_size=412),
+                FrozenNormalisation(alpha_out, beta_out),
+            )
+            return WrappedModule(master_layer)
+        case 'r12q':
+            alpha_in = np.ones(557)
+            beta_in = np.zeros(557)
+            alpha_out = np.ones(549)
+            beta_out = np.zeros(549)
+            master_layer = ExtendedSequential(
+                FrozenNormalisation(alpha_in, beta_in),
+                ExtendedLinear(input_size=557, output_size=512),
+                ExtendedTanh(input_size=512),
+                ExtendedLinear(input_size=512, output_size=512),
+                ExtendedTanh(input_size=512),
+                ExtendedLinear(input_size=512, output_size=512),
+                ExtendedTanh(input_size=512),
+                ExtendedLinear(input_size=512, output_size=512),
+                ExtendedTanh(input_size=512),
+                ExtendedLinear(input_size=512, output_size=549),
+                FrozenNormalisation(alpha_out, beta_out),
+            )
+            return WrappedModule(master_layer)
         case _:
             raise ValueError(f'unknown module: {name}')
