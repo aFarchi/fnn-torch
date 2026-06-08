@@ -10,6 +10,7 @@ from fnn_torch.modules.layer_skip_connection import SkipConnection
 from fnn_torch.modules.layer_normalisation import Normalisation, FrozenNormalisation
 from fnn_torch.modules.layer_append_static import AppendStaticInput, FrozenAppendStaticInput
 from fnn_torch.modules.layer_dropout import ExtendedDropout
+from fnn_torch.modules.layer_region_split import RegionSplit
 
 
 def construct_module(name):
@@ -82,6 +83,17 @@ def construct_module(name):
             master_layer = ExtendedSequential(
                 Normalisation(alpha, beta),
                 ExtendedDropout(input_size=10, dropout_rate=0.25),
+            )
+            return WrappedModule(master_layer)
+        case 'region-split':
+            layer_sh = ExtendedLinear(input_size=6, output_size=5)
+            layer_tr = ExtendedLinear(input_size=6, output_size=5)
+            layer_nh = ExtendedLinear(input_size=6, output_size=5)
+            master_layer = RegionSplit(
+                layer_sh=layer_sh,
+                layer_tr=layer_tr,
+                layer_nh=layer_nh,
+                index_sin_lat=0,
             )
             return WrappedModule(master_layer)
         case 'r03':

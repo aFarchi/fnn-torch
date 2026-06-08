@@ -92,6 +92,34 @@ module fnn
     end type SkipConnectionLayer
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    type, extends(Layer) :: RegionSplitLayer
+        private
+        type(LayerContainer), allocatable :: layer_sh
+        type(LayerContainer), allocatable :: layer_tr
+        type(LayerContainer), allocatable :: layer_nh
+        real(rk), allocatable :: forward_output_sh(:, :)
+        real(rk), allocatable :: forward_output_tr(:, :)
+        real(rk), allocatable :: forward_output_nh(:, :)
+        real(rk), allocatable :: tl_output(:)
+        integer(ik) :: ip_start_sh
+        integer(ik) :: ip_end_sh
+        integer(ik) :: ip_start_tr
+        integer(ik) :: ip_end_tr
+        integer(ik) :: ip_start_nh
+        integer(ik) :: ip_end_nh
+        integer(ik) :: index_sin_lat
+        real(rk) :: sin_30
+        real(rk) :: sin_20
+    contains
+        procedure, pass :: read_parameters => region_split_read_parameters
+        procedure, pass :: set_parameters => region_split_set_parameters
+        procedure, pass :: get_parameters => region_split_get_parameters
+        procedure, pass :: apply_forward => region_split_apply_forward
+        procedure, pass :: apply_tangent_linear => region_split_apply_tangent_linear
+        procedure, pass :: apply_adjoint => region_split_apply_adjoint
+    end type RegionSplitLayer
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     type, extends(Layer) :: NormalisationLayer
         private
     contains
@@ -526,6 +554,148 @@ contains
     end subroutine skip_connection_apply_adjoint
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! implementation of class RegionSplitLayer
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    subroutine region_split_read_parameters(self, fileunit)
+        class(RegionSplitLayer), intent(inout) :: self
+        integer(ik), intent(in) :: fileunit
+        call self % layer_sh % this_layer % read_parameters(fileunit)
+        call self % layer_tr % this_layer % read_parameters(fileunit)
+        call self % layer_nh % this_layer % read_parameters(fileunit)
+    end subroutine region_split_read_parameters
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    subroutine region_split_set_parameters(self, new_parameters)
+        class(RegionSplitLayer), intent(inout) :: self
+        real(rk), intent(in) :: new_parameters(:)
+        call self % layer_sh % this_layer % set_parameters(&
+            new_parameters(self % ip_start_sh:self % ip_end_sh))
+        call self % layer_tr % this_layer % set_parameters(&
+            new_parameters(self % ip_start_tr:self % ip_end_tr))
+        call self % layer_nh % this_layer % set_parameters(&
+            new_parameters(self % ip_start_nh:self % ip_end_nh))
+    end subroutine region_split_set_parameters
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    subroutine region_split_get_parameters(self, parameters)
+        class(RegionSplitLayer), intent(in) :: self
+        real(rk), intent(out) :: parameters(:)
+        call self % layer_sh % this_layer % get_parameters(&
+            parameters(self % ip_start_sh:self % ip_end_sh))
+        call self % layer_tr % this_layer % get_parameters(&
+            parameters(self % ip_start_tr:self % ip_end_tr))
+        call self % layer_nh % this_layer % get_parameters(&
+            parameters(self % ip_start_nh:self % ip_end_nh))
+    end subroutine region_split_get_parameters
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    subroutine region_split_apply_forward(self, train, member, x, y)
+        class(RegionSplitLayer), intent(inout) :: self
+        logical, intent(in) :: train
+        integer(ik), intent(in) :: member
+        real(rk), intent(in) :: x(:)
+        real(rk), intent(out) :: y(:)
+        real(rk) :: sin_x, alpha_nh, alpha_sh, alpha_tr
+        self % forward_input(:, member) = x
+        sin_x = x(self % index_sin_lat)
+        alpha_nh = (sin_x - self % sin_20) / (self % sin_30 - self % sin_20)
+        alpha_nh = max(0.0_rk, min(1.0_rk, alpha_nh))
+        alpha_sh = -(sin_x + self % sin_20) / (self % sin_30 - self % sin_20)
+        alpha_sh = max(0.0_rk, min(1.0_rk, alpha_sh))
+        alpha_tr = (1.0_rk - alpha_nh) * (1.0_rk - alpha_sh)
+        call self % layer_sh % this_layer % apply_forward(&
+            train, member, x,&
+            self % forward_output_sh(member, :))
+        y = self % forward_output_sh(member, :) * alpha_sh
+        call self % layer_tr % this_layer % apply_forward(&
+            train, member, x,&
+            self % forward_output_tr(member, :))
+        y = y + self % forward_output_tr(member, :) * alpha_tr
+        call self % layer_nh % this_layer % apply_forward(&
+            train, member, x,&
+            self % forward_output_nh(member, :))
+        y = y + self % forward_output_nh(member, :) * alpha_nh
+    end subroutine region_split_apply_forward
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    subroutine region_split_apply_tangent_linear(self, member, dp, dx, dy)
+        class(RegionSplitLayer), intent(inout) :: self
+        integer(ik), intent(in) :: member
+        real(rk), intent(in) :: dp(:)
+        real(rk), intent(in) :: dx(:)
+        real(rk), intent(out) :: dy(:)
+        real(rk) :: sin_x, alpha_nh, alpha_sh, alpha_tr
+        sin_x = self % forward_input(self % index_sin_lat, member)
+        alpha_nh = (sin_x - self % sin_20) / (self % sin_30 - self % sin_20)
+        alpha_nh = max(0.0_rk, min(1.0_rk, alpha_nh))
+        alpha_sh = -(sin_x + self % sin_20) / (self % sin_30 - self % sin_20)
+        alpha_sh = max(0.0_rk, min(1.0_rk, alpha_sh))
+        alpha_tr = (1.0_rk - alpha_nh) * (1.0_rk - alpha_sh)
+        call self % layer_sh % this_layer % apply_tangent_linear(&
+            member, dp(self % ip_start_sh:self % ip_end_sh), dx,&
+            self % tl_output)
+        dy = self % tl_output * alpha_sh
+        call self % layer_tr % this_layer % apply_tangent_linear(&
+            member, dp(self % ip_start_tr:self % ip_end_tr), dx,&
+            self % tl_output)
+        dy = dy + self % tl_output * alpha_tr
+        call self % layer_nh % this_layer % apply_tangent_linear(&
+            member, dp(self % ip_start_nh:self % ip_end_nh), dx,&
+            self % tl_output)
+        dy = dy + self % tl_output * alpha_nh
+        if ( - self % sin_30 < sin_x .and. sin_x < - self % sin_20 ) then
+            dy = dy - dx(self % index_sin_lat) * self % forward_output_sh(member, :) / (self % sin_30 - self % sin_20)
+            dy = dy + dx(self % index_sin_lat) * self % forward_output_tr(member, :) / (self % sin_30 - self % sin_20)
+        end if
+        if ( self % sin_20 < sin_x .and. sin_x < self % sin_30 ) then
+            dy = dy - dx(self % index_sin_lat) * self % forward_output_tr(member, :) / (self % sin_30 - self % sin_20)
+            dy = dy + dx(self % index_sin_lat) * self % forward_output_nh(member, :) / (self % sin_30 - self % sin_20)
+        end if
+    end subroutine region_split_apply_tangent_linear
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    subroutine region_split_apply_adjoint(self, member, dy, dp, dx)
+        class(RegionSplitLayer), intent(inout) :: self
+        integer(ik), intent(in) :: member
+        real(rk), intent(inout) :: dy(:)
+        real(rk), intent(out) :: dp(:)
+        real(rk), intent(out) :: dx(:)
+        real(rk) :: sin_x, alpha_nh, alpha_sh, alpha_tr
+        sin_x = self % forward_input(self % index_sin_lat, member)
+        alpha_nh = (sin_x - self % sin_20) / (self % sin_30 - self % sin_20)
+        alpha_nh = max(0.0_rk, min(1.0_rk, alpha_nh))
+        alpha_sh = -(sin_x + self % sin_20) / (self % sin_30 - self % sin_20)
+        alpha_sh = max(0.0_rk, min(1.0_rk, alpha_sh))
+        alpha_tr = (1.0_rk - alpha_nh) * (1.0_rk - alpha_sh)
+        call self % layer_sh % this_layer % apply_adjoint(&
+            member, dy,&
+            dp(self % ip_start_sh:self % ip_end_sh),&
+            self % tl_output)
+        dp(self % ip_start_sh:self % ip_end_sh) = alpha_sh * dp(self % ip_start_sh:self % ip_end_sh)
+        dx = alpha_sh * self % tl_output
+        call self % layer_tr % this_layer % apply_adjoint(&
+            member, dy,&
+            dp(self % ip_start_tr:self % ip_end_tr),&
+            self % tl_output)
+        dp(self % ip_start_tr:self % ip_end_tr) = alpha_tr * dp(self % ip_start_tr:self % ip_end_tr)
+        dx = dx + alpha_tr * self % tl_output
+        call self % layer_nh % this_layer % apply_adjoint(&
+            member, dy,&
+            dp(self % ip_start_nh:self % ip_end_nh),&
+            self % tl_output)
+        dp(self % ip_start_nh:self % ip_end_nh) = alpha_nh * dp(self % ip_start_nh:self % ip_end_nh)
+        dx = dx + alpha_nh * self % tl_output
+        if ( - self % sin_30 < sin_x .and. sin_x < - self % sin_20 ) then
+            dx(self % index_sin_lat) = dx(self % index_sin_lat) - dot_product(self % forward_output_sh(member, :), dy) / (self % sin_30 - self % sin_20)
+            dx(self % index_sin_lat) = dx(self % index_sin_lat) + dot_product(self % forward_output_tr(member, :), dy) / (self % sin_30 - self % sin_20)
+        end if
+        if ( self % sin_20 < sin_x .and. sin_x < self % sin_30 ) then
+            dx(self % index_sin_lat) = dx(self % index_sin_lat) - dot_product(self % forward_output_tr(member, :), dy) / (self % sin_30 - self % sin_20)
+            dx(self % index_sin_lat) = dx(self % index_sin_lat) + dot_product(self % forward_output_nh(member, :), dy) / (self % sin_30 - self % sin_20)
+        end if
+    end subroutine region_split_apply_adjoint
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! implementation of class NormalisationLayer
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     subroutine normalisation_apply_forward(self, train, member, x, y)
@@ -757,6 +927,9 @@ contains
             case('dropout')
                 allocate(DropoutLayer::self % this_layer)
                 self % this_layer = dropout_layer_fromfile(batch_size, fileunit)
+            case('region_split')
+                allocate(RegionSplitLayer::self % this_layer)
+                self % this_layer = region_split_layer_fromfile(batch_size, fileunit)
             case default
                 allocate(SequentialLayer::self % this_layer)
                 self % this_layer = sequential_layer_fromfile(batch_size, fileunit)
@@ -843,6 +1016,38 @@ contains
         )
         self % num_parameters = self % layer_container % this_layer % num_parameters
     end function skip_connection_layer_fromfile
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    type(RegionSplitLayer) function region_split_layer_fromfile(batch_size, fileunit) result (self)
+        integer(ik), intent(in) :: batch_size
+        integer(ik), intent(in) :: fileunit
+        read(fileunit, *) self % index_sin_lat
+        self % layer_sh = layer_container_fromfile(batch_size, fileunit)
+        self % layer_tr = layer_container_fromfile(batch_size, fileunit)
+        self % layer_nh = layer_container_fromfile(batch_size, fileunit)
+        self % Layer = construct_layer(&
+            self % layer_sh % this_layer % input_size,&
+            self % layer_sh % this_layer % output_size,&
+            batch_size,&
+            0,&
+            .false.&
+        )
+        self % num_parameters = self % layer_sh % this_layer % num_parameters
+        self % num_parameters = self % num_parameters + self % layer_tr % this_layer % num_parameters
+        self % num_parameters = self % num_parameters + self % layer_nh % this_layer % num_parameters
+        self % ip_start_sh = 1
+        self % ip_end_sh = self % ip_start_sh + self % layer_sh % this_layer % num_parameters - 1
+        self % ip_start_tr = self % ip_end_sh + 1
+        self % ip_end_tr = self % ip_start_tr + self % layer_tr % this_layer % num_parameters - 1
+        self % ip_start_nh = self % ip_end_tr + 1
+        self % ip_end_nh = self % ip_start_nh + self % layer_nh % this_layer % num_parameters - 1
+        self % sin_20 = sin(20.0_rk * acos(-1.0) / 180.0_rk)
+        self % sin_30 = sin(30.0_rk * acos(-1.0) / 180.0_rk)
+        allocate(self % forward_output_sh(batch_size, self % layer_sh % this_layer % output_size))
+        allocate(self % forward_output_tr(batch_size, self % layer_tr % this_layer % output_size))
+        allocate(self % forward_output_nh(batch_size, self % layer_nh % this_layer % output_size))
+        allocate(self % tl_output(self % layer_sh % this_layer % output_size))
+    end function region_split_layer_fromfile
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     type(NormalisationLayer) function normalisation_layer_fromfile(batch_size, fileunit) result (self)
